@@ -2,6 +2,7 @@
 
 import { useState, Fragment } from 'react';
 import axios from 'axios';
+import { API_URL } from '../config';
 
 interface ExtractedField {
   field_name: string;
@@ -37,7 +38,7 @@ export default function ResultsTable({ documents, loading, onRefresh }: ResultsT
     
     setDeletingId(id);
     try {
-      await axios.delete(`http://76.13.17.251:8001/api/documents/${id}`);
+      await axios.delete(`${API_URL}/api/documents/${id}`);
       onRefresh();
     } catch (error) {
       console.error('Error deleting document:', error);

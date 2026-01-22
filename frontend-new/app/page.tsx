@@ -13,7 +13,8 @@ export default function Home() {
   const fetchDocuments = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('http://localhost:8000/api/documents');
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
+      const response = await axios.get(`${API_URL}/api/documents`);
       setDocuments(response.data.documents);
     } catch (error) {
       console.error('Error fetching documents:', error);

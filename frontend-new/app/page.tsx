@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import DocumentUpload from './components/DocumentUpload';
 import ResultsTable from './components/ResultsTable';
 import axios from 'axios';
+import { API_URL } from './config';
 
 export default function Home() {
   const [documents, setDocuments] = useState([]);

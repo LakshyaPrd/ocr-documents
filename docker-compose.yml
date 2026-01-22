@@ -13,20 +13,17 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   ocr-frontend:
-    build: ./frontend-new
+    build:
+      context: ./frontend-new
+      args:
+        - NEXT_PUBLIC_API_URL=http://76.13.17.251:8001
     container_name: ocr-frontend
     ports:
       - "3001:3001"
     environment:
-      - NEXT_PUBLIC_API_URL=http://YOUR_SERVER_IP:8001
+      - NEXT_PUBLIC_API_URL=http://76.13.17.251:8001
     depends_on:
       - ocr-backend
     restart: unless-stopped

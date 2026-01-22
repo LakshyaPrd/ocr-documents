@@ -31,8 +31,7 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
     try {
       setLoadingTypes(true);
       setError('');
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
-      const response = await axios.get<DocumentType[]>(`${API_URL}/api/document-types`);
+      const response = await axios.get<DocumentType[]>('http://76.13.17.251:8001/api/document-types');
       console.log('Document types loaded:', response.data);
       setDocumentTypes(response.data);
     } catch (error: any) {
@@ -84,8 +83,7 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
     formData.append('document_type', selectedType);
 
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
-      const response = await axios.post(`${API_URL}/api/upload`, formData, {
+      const response = await axios.post('http://76.13.17.251:8001/api/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

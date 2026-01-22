@@ -13,11 +13,13 @@ RUN npm ci
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
+
+# Accept build argument
+ARG NEXT_PUBLIC_API_URL=http://localhost:8001
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
-# Set environment variable for API URL (will be overridden by docker-compose)
-ENV NEXT_PUBLIC_API_URL=http://localhost:8001
 
 # Build Next.js app
 RUN npm run build

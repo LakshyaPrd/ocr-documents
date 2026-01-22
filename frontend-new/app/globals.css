@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-primary {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  transition: all 0.3s;
+  background: linear-gradient(to right, rgb(59 130 246), rgb(37 99 235));
+  color: white;
+}
+
+.btn-primary:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  transform: scale(1.05);
+}
+
+.btn-primary:active {
+  transform: scale(0.95);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  transition: all 0.3s;
+  background-color: rgb(229 231 235);
+  color: rgb(31 41 55);
+}
+
+.btn-secondary:hover {
+  background-color: rgb(209 213 219);
+}
+
+@media (prefers-color-scheme: dark) {
+  .btn-secondary {
+    background-color: rgb(55 65 81);
+    color: rgb(243 244 246);
+  }
+  
+  .btn-secondary:hover {
+    background-color: rgb(75 85 99);
+  }
+}
+
+.card {
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  transition: all 0.3s;
+}
+
+.card:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .card {
+    background-color: rgb(31 41 55);
+  }
+}
+
+.input-field {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border: 2px solid rgb(209 213 219);
+  background-color: white;
+  color: rgb(17 24 39);
+  transition: all 0.2s;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: rgb(59 130 246);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .input-field {
+    border-color: rgb(75 85 99);
+    background-color: rgb(55 65 81);
+    color: rgb(243 244 246);
+  }
+  
+  .input-field:focus {
+    border-color: rgb(59 130 246);
+  }
+}

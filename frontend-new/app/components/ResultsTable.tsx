@@ -37,8 +37,7 @@ export default function ResultsTable({ documents, loading, onRefresh }: ResultsT
     
     setDeletingId(id);
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
-      await axios.delete(`${API_URL}/api/documents/${id}`);
+      await axios.delete(`http://76.13.17.251:8001/api/documents/${id}`);
       onRefresh();
     } catch (error) {
       console.error('Error deleting document:', error);

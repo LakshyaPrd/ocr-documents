@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  ocr-backend:
+    build: ./backend
+    container_name: ocr-backend
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backend/temp_images:/app/temp_images
+      - easyocr-models:/root/.EasyOCR  # Cache EasyOCR models
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  ocr-frontend:
+    build: ./frontend-new
+    container_name: ocr-frontend
+    ports:
+      - "3001:3001"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://YOUR_SERVER_IP:8001
+    depends_on:
+      - ocr-backend
+    restart: unless-stopped
+
+volumes:
+  easyocr-models:  # Persistent volume for EasyOCR models
+
+networks:
+  default:
+    name: ocr-network

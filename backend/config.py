@@ -150,6 +150,50 @@ DOCUMENT_TYPES = {
         "field_patterns": {}  # Using custom extraction logic
     },
     
+    "INVOICE": {
+        "name": "Invoice",
+        "page1_keywords": ["invoice", "tax invoice", "commercial invoice", "proforma"],
+        "page2_keywords": [],
+        "fields": [
+            "invoice_number", "invoice_date", "due_date", "invoice_type",
+            "supplier_name", "supplier_address", "supplier_email", "supplier_phone", "supplier_tax_id",
+            "customer_name", "customer_address", "customer_email", "customer_phone", "customer_tax_id",
+            "line_items", "subtotal", "tax_amount", "tax_rate", "grand_total",
+            "payment_terms", "currency", "po_number", "bank_details", "notes"
+        ],
+        "field_patterns": {}  # Using custom invoice extraction logic
+    },
+    
+    "PURCHASE_ORDER": {
+        "name": "Purchase Order",
+        "page1_keywords": ["purchase order", "PO", "P.O.", "order"],
+        "page2_keywords": [],
+        "fields": [
+            "po_number", "po_date", "expiry_date", "delivery_date", "po_type",
+            "buyer_name", "buyer_address", "buyer_email", "buyer_phone", "buyer_tax_id",
+            "supplier_name", "supplier_address", "supplier_email", "supplier_phone", "supplier_tax_id",
+            "line_items", "subtotal", "tax_amount", "discount", "grand_total", "currency",
+            "payment_terms", "payment_method",
+            "delivery_address", "shipping_method", "shipping_charges",
+            "contract_number", "quotation_number", "remarks"
+        ],
+        "field_patterns": {}  # Using custom PO extraction logic
+    },
+    
+    "COMPANY_LICENSE": {
+        "name": "Company License",
+        "page1_keywords": ["license", "company license", "business license", "commercial license"],
+        "page2_keywords": [],
+        "fields": [
+            "license_type", "license_no", "company_name", "business_name", "legal_type",
+            "issue_date", "expiry_date", "duns_number", "main_license_no", "register_no", "dcci_no",
+            "license_members", "license_activities",
+            "full_address", "phone", "fax", "mobile", "po_box", "parcel_id", "email",
+            "partners"
+        ],
+        "field_patterns": {}  # Using custom license extraction logic
+    },
+    
     "LABOR_CONTRACT": {
         "name": "Labor Contract",
         "page1_keywords": ["employment contract", "labor contract"],

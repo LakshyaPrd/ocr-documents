@@ -78,14 +78,17 @@ async def root():
 @app.get("/api/document-types", response_model=List[DocumentTypeResponse])
 async def get_document_types():
     """Get all available document types that are supported"""
-    # Only show the 6 main supported document types
+    #Only show the main supported document types
     supported_types = [
         "PASSPORT",
         "LABOR_CARD", 
         "RESIDENCE_VISA",
         "EMIRATES_ID",
         "HOME_COUNTRY_ID",
-        "VISIT_VISA"
+        "VISIT_VISA",
+        "INVOICE",
+        "PURCHASE_ORDER",
+        "COMPANY_LICENSE"
     ]
     
     types = []

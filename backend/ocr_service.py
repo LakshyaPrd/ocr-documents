@@ -331,6 +331,30 @@ class OCRService:
                 print(f"✅ Extracted {len(visit_visa_fields)} visit visa fields")
                 return visit_visa_fields
         
+        # For INVOICE: Use proven extraction logic (optimized)
+        if document_type == "INVOICE":
+            invoice_fields = self._extract_invoice_proven(text)
+            
+            if invoice_fields:
+                print(f"✅ Extracted {len(invoice_fields)} invoice fields")
+                return invoice_fields
+        
+        # For PURCHASE_ORDER: Use proven extraction logic (optimized)
+        if document_type == "PURCHASE_ORDER":
+            po_fields = self._extract_purchase_order_proven(text)
+            
+            if po_fields:
+                print(f"✅ Extracted {len(po_fields)} purchase order fields")
+                return po_fields
+        
+        # For COMPANY_LICENSE: Use proven extraction logic (optimized)
+        if document_type == "COMPANY_LICENSE":
+            license_fields = self._extract_company_license_proven(text)
+            
+            if license_fields:
+                print(f"✅ Extracted {len(license_fields)} company license fields")
+                return license_fields
+        
         # Fallback for non-passports: use old logic
         return {}
     

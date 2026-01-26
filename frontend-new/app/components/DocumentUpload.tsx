@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config';
+import UploadGuidelines from './UploadGuidelines';
 
 interface DocumentType {
   key: string;
@@ -16,13 +17,16 @@ interface DocumentUploadProps {
 
 export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
   const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
-  const [selectedType, setSelectedType] = useState('');
+  const [selectedType, setSelectedType] = useState('AUTO_DETECT'); // Default to auto-detect
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('');
   const [loadingTypes, setLoadingTypes] = useState(true);
   const [error, setError] = useState('');
+  const [detectedType, setDetectedType] = useState<string>('');
+  const [detectionConfidence, setDetectionConfidence] = useState<number>(0);
+  const [guidelinesCollapsed, setGuidelinesCollapsed] = useState(false);
 
   useEffect(() => {
     fetchDocumentTypes();
@@ -71,17 +75,27 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
   };
 
   const handleUpload = async () => {
-    if (!selectedFile || !selectedType) {
-      setUploadStatus('Please select both a document type and file');
+    if (!selectedFile) {
+      setUploadStatus('Please select a file');
       return;
     }
 
+    // Allow upload without type selection if AUTO_DETECT is selected
+    if (!selectedType || selectedType === 'AUTO_DETECT') {
+      setUploadStatus('Auto-detecting document type...');
+    }
+
     setUploading(true);
-    setUploadStatus('Uploading...');
+    setDetectedType('');
+    setDetectionConfidence(0);
 
     const formData = new FormData();
     formData.append('file', selectedFile);
-    formData.append('document_type', selectedType);
+    
+    // Only append document_type if not auto-detecting
+    if (selectedType && selectedType !== 'AUTO_DETECT') {
+      formData.append('document_type', selectedType);
+    }
 
     try {
       const response = await axios.post(`${API_URL}/api/upload`, formData, {
@@ -90,15 +104,27 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
         },
       });
 
-      setUploadStatus('✅ Upload successful! Processing started...');
+      // Check if document was auto-detected
+      if (!selectedType || selectedType === 'AUTO_DETECT') {
+        setUploadStatus('✅ Document auto-detected and uploaded! Processing started...');
+      } else {
+        setUploadStatus('✅ Upload successful! Processing started...');
+      }
+      
       setSelectedFile(null);
-      setSelectedType('');
+      setSelectedType('AUTO_DETECT');
       onUploadSuccess();
 
       // Clear status after 3 seconds
       setTimeout(() => setUploadStatus(''), 3000);
     } catch (error: any) {
-      setUploadStatus(`❌ Upload failed: ${error.response?.data?.detail || error.message}`);
+      const errorMsg = error.response?.data?.detail || error.message;
+      setUploadStatus(`❌ Upload failed: ${errorMsg}`);
+      
+      // If auto-detection failed, prompt user to select type manually
+      if (errorMsg.includes('auto-detect')) {
+        setUploadStatus('❌ Could not auto-detect document type. Please select manually from dropdown.');
+      }
     } finally {
       setUploading(false);
     }
@@ -109,6 +135,12 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
       <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">
         Upload Document
       </h2>
+
+      {/* Upload Guidelines */}
+      <UploadGuidelines 
+        isCollapsed={guidelinesCollapsed}
+        onToggle={() => setGuidelinesCollapsed(!guidelinesCollapsed)}
+      />
 
       {error && (
         <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -132,6 +164,8 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
           className="input-field"
           disabled={loadingTypes}
         >
+          <option value="AUTO_DETECT">🤖 Auto-Detect (Recommended)</option>
+          <option value="" disabled>──────────────</option>
           <option value="">-- Choose Document Type --</option>
           {documentTypes.map((type) => (
             <option key={type.key} value={type.key}>

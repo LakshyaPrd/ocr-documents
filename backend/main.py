@@ -5,7 +5,7 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Bac
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from contextlib import asynccontextmanager
 import os
 import shutil
@@ -20,6 +20,7 @@ from schemas import (
 )
 from ocr_service import OCRService
 from config import DOCUMENT_TYPES
+from document_classifier import DocumentClassifier
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -58,6 +59,9 @@ app.add_middleware(
 # Initialize OCR service
 TESSERACT_CMD = os.getenv("TESSERACT_CMD")
 ocr_service = OCRService(tesseract_cmd=TESSERACT_CMD)
+
+# Initialize document classifier
+classifier = DocumentClassifier()
 
 # Upload directory
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", "./uploads")
@@ -157,17 +161,14 @@ def process_document_ocr(document_id: int, file_path: str, document_type: str, d
 async def upload_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    document_type: str = Form(...),
+    document_type: Optional[str] = Form(None),  # Now optional for auto-detection
     db: Session = Depends(get_db)
 ):
     """
-    Upload a document for OCR processing
+    Upload a document for OCR processing.
+    If document_type is not provided, it will be auto-detected.
     """
-    # Validate document type
-    if document_type not in DOCUMENT_TYPES:
-        raise HTTPException(status_code=400, detail=f"Invalid document type: {document_type}")
-    
-    # Validate file extension
+    # Validate file extension first
     allowed_extensions = {"pdf", "png", "jpg", "jpeg"}
     file_ext = file.filename.split(".")[-1].lower()
     if file_ext not in allowed_extensions:
@@ -176,19 +177,51 @@ async def upload_document(
             detail=f"Invalid file type. Allowed: {', '.join(allowed_extensions)}"
         )
     
-    # Generate unique filename
+    # Generate unique filename and save file
     unique_filename = f"{uuid.uuid4()}_{file.filename}"
     file_path = os.path.join(UPLOAD_DIR, unique_filename)
     
-    # Save file
     try:
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-        
         file_size = os.path.getsize(file_path)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
     
+    # Auto-detect document type if not provided
+    detected_type = None
+    confidence = 0.0
+    
+    if not document_type:
+        try:
+            detected_type, confidence = classifier.quick_classify_from_file(file_path, ocr_service)
+            
+            if detected_type == 'UNKNOWN' or confidence < 50:
+                # Clean up file if detection failed
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                raise HTTPException(
+                    status_code=400,
+                    detail="Could not auto-detect document type. Please specify document_type parameter."
+                )
+            
+            document_type = detected_type
+            print(f"✓ Auto-detected document type: {document_type} ({confidence:.1f}% confidence)")
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            # Clean up file on error
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            raise HTTPException(status_code=500, detail=f"Auto-detection failed: {str(e)}")
+    
+    # Validate document type (whether provided or detected)
+    if document_type not in DOCUMENT_TYPES:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        raise HTTPException(status_code=400, detail=f"Invalid document type: {document_type}")
+
     # Create database record
     document = Document(
         document_type=document_type,

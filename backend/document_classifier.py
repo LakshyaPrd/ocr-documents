@@ -187,18 +187,50 @@ class DocumentClassifier:
             Tuple of (document_type, confidence_score)
         """
         try:
-            # Extract text from first page only for speed
-            text = ocr_service.extract_text_from_image(file_path, page_limit=1)
+            logger.info(f"Starting classification for: {file_path}")
             
-            if not text:
-                logger.warning(f"No text extracted from {file_path}")
+            # Extract text using OCR service's process_document method
+            # We'll use a lightweight approach - just get the raw text
+            from pathlib import Path
+            import tempfile
+            
+            # Create temp directory for processing
+            temp_dir = tempfile.mkdtemp()
+            
+            try:
+                # Process document to get text (this will handle PDF/images)
+                result = ocr_service.process_document(file_path, 'PASSPORT', temp_dir)
+                
+                # Get the raw text from OCR
+                if 'raw_text' in result:
+                    text = result['raw_text']
+                elif 'extracted_fields' in result:
+                    # Fallback: combine all extracted field values
+                    text = ' '.join([str(v.get('value', '')) for v in result['extracted_fields'].values()])
+                else:
+                    logger.warning("No text found in OCR result")
+                    return ('UNKNOWN', 0.0)
+                
+                logger.info(f"Extracted {len(text)} characters for classification")
+                
+            finally:
+                # Cleanup temp directory
+                import shutil
+                shutil.rmtree(temp_dir, ignore_errors=True)
+            
+            if not text or len(text.strip()) < 10:
+                logger.warning(f"Insufficient text extracted from {file_path}")
                 return ('UNKNOWN', 0.0)
             
             # Get filename for additional hints
             filename = Path(file_path).name
             
-            return self.classify(text, filename)
+            # Classify based on extracted text
+            doc_type, confidence = self.classify(text, filename)
+            
+            logger.info(f"Classification result: {doc_type} ({confidence:.1f}% confidence)")
+            return (doc_type, confidence)
             
         except Exception as e:
-            logger.error(f"Error classifying file {file_path}: {str(e)}")
+            logger.error(f"Error classifying file {file_path}: {str(e)}", exc_info=True)
             return ('UNKNOWN', 0.0)

@@ -194,12 +194,16 @@ async def upload_document(
     
     if not document_type:
         try:
+            print(f"🔍 Auto-detecting document type for: {file.filename}")
             detected_type, confidence = classifier.quick_classify_from_file(file_path, ocr_service)
+            
+            print(f"📊 Detection result: {detected_type} with {confidence:.1f}% confidence")
             
             if detected_type == 'UNKNOWN' or confidence < 50:
                 # Clean up file if detection failed
                 if os.path.exists(file_path):
                     os.remove(file_path)
+                print(f"❌ Auto-detection failed: type={detected_type}, confidence={confidence:.1f}%")
                 raise HTTPException(
                     status_code=400,
                     detail="Could not auto-detect document type. Please specify document_type parameter."
@@ -214,6 +218,9 @@ async def upload_document(
             # Clean up file on error
             if os.path.exists(file_path):
                 os.remove(file_path)
+            print(f"❌ Auto-detection error: {str(e)}")
+            import traceback
+            traceback.print_exc()
             raise HTTPException(status_code=500, detail=f"Auto-detection failed: {str(e)}")
     
     # Validate document type (whether provided or detected)

@@ -2,35 +2,22 @@ version: '3.8'
 
 services:
   ocr-backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: ocr-backend
     ports:
-      - "8001:8001"
+      - "8002:8001"  # External:Internal (using 8002 to avoid conflicts)
+    environment:
+      - UPLOAD_DIR=/app/uploads
+      - TESSERACT_CMD=/usr/bin/tesseract
     volumes:
       - ./backend/uploads:/app/uploads
       - ./backend/temp_images:/app/temp_images
-      - easyocr-models:/root/.EasyOCR  # Cache EasyOCR models
-    environment:
-      - PYTHONUNBUFFERED=1
     restart: unless-stopped
-
-  ocr-frontend:
-    build:
-      context: ./frontend-new
-      args:
-        - NEXT_PUBLIC_API_URL=http://76.13.17.251:8001
-    container_name: ocr-frontend
-    ports:
-      - "3001:3001"
-    environment:
-      - NEXT_PUBLIC_API_URL=http://76.13.17.251:8001
-    depends_on:
-      - ocr-backend
-    restart: unless-stopped
-
-volumes:
-  easyocr-models:  # Persistent volume for EasyOCR models
+    networks:
+      - ocr-network
 
 networks:
-  default:
-    name: ocr-network
+  ocr-network:
+    driver: bridge

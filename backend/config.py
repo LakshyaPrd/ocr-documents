@@ -269,35 +269,60 @@ DOCUMENT_TYPES = {
     
     "COMPANY_LICENSE": {
         "name": "Company License",
-        "page1_keywords": ["license"],
+        "page1_keywords": ["trade license", "commercial license", "professional license", "license type"],
         "page2_keywords": [],
         "fields": [
-            "license_number", "license_type", "issue_date", "expiry_date",
-            "company_name", "trade_name", "legal_entity_type", "business_activity",
-            "industry_classification", "registered_address", "business_location",
-            "emirates", "issuing_authority", "license_status", "owner_name",
-            "manager_name", "authorized_signatory", "capital_amount",
-            "phone_number", "email_address"
+            "license_type", "license_no", "main_license_no", "register_no",
+            "dcci_no", "duns_no", "company_name", "company_name_ar",
+            "business_name", "legal_type", "issue_date", "expiry_date",
+            "address", "po_box", "phone", "fax", "mobile", "parcel_id", "email",
+            "members_table", "partners_table"
         ],
-        "field_patterns": {
-            "license_number": [r"license\s*no\.?\s*[:\-]?\s*([A-Z0-9\-]{4,20})", r"licence\s*number\s*[:\-]?\s*([A-Z0-9\-]{4,20})"],
-        }
+        "field_patterns": {}  # Using custom extraction logic
     },
     
     "COMPANY_VAT_CERTIFICATE": {
         "name": "Company VAT Certificate",
-        "page1_keywords": ["federal tax authority"],
+        "page1_keywords": ["federal tax authority", "tax registration certificate", "vat"],
         "page2_keywords": [],
         "fields": [
-            "vat_registration_number", "trn", "certificate_number", "issue_date",
-            "registration_date", "company_name", "trade_name", "legal_form",
-            "tax_group", "business_activity", "classification", "registered_address",
-            "business_address", "emirates", "email_address", "phone_number",
-            "contact_person", "vat_effective_date", "registration_status"
+            "registration_number", "certificate_number", "legal_name_english",
+            "legal_name_arabic", "registered_address", "contact_number",
+            "effective_registration_date", "date_of_issue",
+            "first_vat_return_period", "vat_return_due_date", "tax_period_start_end"
         ],
-        "field_patterns": {
-            "vat_registration_number": [r"vat\s*no\.?\s*[:\-]?\s*(\d{15})", r"trn\s*[:\-]?\s*(\d{15})"],
-            "trn": [r"trn\s*[:\-]?\s*(\d{15})"],
-        }
+        "field_patterns": {}  # Using custom extraction logic
+    },
+    
+    "VISA_CANCELLATION": {
+        "name": "Visa Cancellation",
+        "page1_keywords": ["visa cancellation", "residence cancellation", "application for cancellation", "cancellation transaction"],
+        "page2_keywords": [],
+        "fields": [
+            "full_name", "passport_number", "nationality", "date_of_birth",
+            "visa_type", "visa_number", "issuing_emirate", "profession",
+            "sponsor_name", "sponsor_id", "establishment_number",
+            "cancellation_date", "cancellation_ref", "application_number"
+        ],
+        "field_patterns": {}  # Using custom extraction logic
+    },
+    
+    "ENTRY_PERMIT": {
+        "name": "Entry Permit",
+        "page1_keywords": ["entry permit", "permit number", "permit no"],
+        "page2_keywords": [],
+        "fields": [
+            "permit_number", "visa_number", "file_number", "uid_number",
+            "application_number", "reference_number", "full_name", "nationality",
+            "gender", "date_of_birth", "passport_number", "passport_issue_date",
+            "passport_expiry_date", "passport_issue_place", "permit_type",
+            "permit_category", "entry_type", "number_of_entries", "duration",
+            "issue_date", "expiry_date", "valid_from", "valid_until",
+            "port_of_entry", "purpose_of_visit", "sponsor_name", "sponsor_id",
+            "employer_name", "job_title", "email", "phone", "address",
+            "status", "approval_status", "issued_by", "issuing_office",
+            "qr_code", "barcode_number"
+        ],
+        "field_patterns": {}  # Using custom extraction logic
     }
 }

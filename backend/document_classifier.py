@@ -22,7 +22,7 @@ class DocumentClassifier:
                 'patterns': [
                     r'P<[A-Z]{3}',  # MRZ line starting with P<
                     r'[A-Z0-9]{9}<<',  # Passport number in MRZ format
-                    r'passport\s*(?:no|number|#)',
+                    # Removed generic 'passport no' as it appears in Visas too
                 ],
                 'weight': 1.0
             },
@@ -57,7 +57,7 @@ class DocumentClassifier:
                 'weight': 1.0
             },
             'HOME_COUNTRY_ID': {
-                'keywords': ['aadhaar', 'aadhar', 'uid', 'uidai'],
+                'keywords': ['aadhaar', 'aadhar', 'uidai'],  # Removed generic 'uid'
                 'patterns': [
                     r'aadhaa?r',
                     r'unique\s*identification',
@@ -67,14 +67,16 @@ class DocumentClassifier:
                 'weight': 1.0
             },
             'VISIT_VISA': {
-                'keywords': ['visit visa', 'tourist visa', 'visitor'],
+                'keywords': ['visit visa', 'tourist visa', 'visitor', 'entry permit'],
                 'patterns': [
                     r'visit\s*visa',
                     r'tourist\s*visa',
                     r'visitor\s*visa',
                     r'entry\s*type.*visit',
+                    r'entry\s*permit',  # Relaxed from 'entry permit no'
+                    r'u\.i\.d\s*no',
                 ],
-                'weight': 1.0
+                'weight': 1.2  # Increased weight to prioritize over Passport
             },
             'INVOICE': {
                 'keywords': ['invoice', 'tax invoice', 'bill', 'فاتورة'],
@@ -127,6 +129,8 @@ class DocumentClassifier:
             return ('UNKNOWN', 0.0)
         
         text_lower = text.lower()
+        print(f"📄 CLASSIFIER SAW TEXT START: {text[:200]}...")
+        print(f"📄 CLASSIFIER SAW TEXT END: ...{text[-200:]}")
         scores = {}
         
         # Calculate scores for each document type
@@ -156,6 +160,7 @@ class DocumentClassifier:
             scores[doc_type] = score
         
         # Get best match
+        print(f"📊 ALL CLASSIFIER SCORES: {scores}")
         if not scores or max(scores.values()) == 0:
             return ('UNKNOWN', 0.0)
         

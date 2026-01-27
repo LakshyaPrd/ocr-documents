@@ -298,6 +298,41 @@ class OCRService:
                 print(f"✅ Extracted {len(visa_fields)} residence visa fields")
                 return visa_fields
         
+        # For VISA CANCELLATION: Use specific extraction logic
+        if document_type == "VISA_CANCELLATION":
+            cancellation_fields = self._extract_visa_cancellation_proven(text)
+            if cancellation_fields:
+                print(f"✅ Extracted {len(cancellation_fields)} visa cancellation fields")
+                return cancellation_fields
+        
+        # For COMPANY LICENSE: Use optimized extraction
+        if document_type == "COMPANY_LICENSE":
+            license_fields = self._extract_company_license_proven(text)
+            if license_fields:
+                print(f"✅ Extracted {len(license_fields)} company license fields")
+                return license_fields
+
+        # For COMPANY VAT CERTIFICATE: Use optimized extraction
+        if document_type == "COMPANY_VAT_CERTIFICATE":
+            vat_fields = self._extract_vat_certificate_proven(text)
+            if vat_fields:
+                print(f"✅ Extracted {len(vat_fields)} vat certificate fields")
+                return vat_fields
+        
+        # For ENTRY PERMIT: Use optimized extraction
+        if document_type == "ENTRY_PERMIT":
+            permit_fields = self._extract_entry_permit_proven(text)
+            if permit_fields:
+                print(f"✅ Extracted {len(permit_fields)} entry permit fields")
+                return permit_fields
+        
+        # For LABOR CONTRACT: Use standardized extraction
+        if document_type == "LABOR_CONTRACT":
+            contract_fields = self.extract_simple_fields(text, "LABOR_CONTRACT")
+            if contract_fields:
+                print(f"✅ Extracted {len(contract_fields)} labor contract fields")
+                return contract_fields
+        
         # For EMIRATES ID: Use proven extraction logic (optimized)
         if document_type == "EMIRATES_ID":
             # Use full OCR results - already have text from extract_text_from_image
@@ -822,6 +857,325 @@ class OCRService:
         
         return extracted
 
+    def _extract_visa_cancellation_proven(self, text: str) -> Dict:
+        """
+        Extract visa cancellation fields using proven logic
+        """
+        extracted = {}
+        
+        # 1. Full Name
+        name_patterns = [
+            r'name\s*[:\-]?\s*([A-Z][A-Za-z\s]{5,50})',
+            r'applicant\s*[:\-]?\s*([A-Z][A-Za-z\s]{5,50})',
+            r'employee\s*[:\-]?\s*([A-Z][A-Za-z\s]{5,50})'
+        ]
+        for pattern in name_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                name = match.group(1).strip()
+                name = re.sub(r'\s+', ' ', name)
+                if len(name.split()) >= 2:
+                     extracted['full_name'] = {'value': name.upper(), 'confidence': 85.0, 'source': 'CANCEL_OCR'}
+                     break
+        
+        # 2. Passport Number
+        ppt_patterns = [
+            r'passport\s*(?:no|number|#)?\s*[:\-]?\s*([A-Z0-9]{6,9})',
+            r'passport\s*([A-Z0-9]{6,9})',
+            r'([A-Z]{1,2}\d{6,8})'
+        ]
+        for pattern in ppt_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                extracted['passport_number'] = {'value': match.group(1).upper(), 'confidence': 90.0, 'source': 'CANCEL_OCR'}
+                break
+        
+        # 3. Visa/Residence Number
+        visa_patterns = [
+            r'visa\s*(?:no|number|#)?\s*[:\-]?\s*(\d{10,15})',
+            r'residence\s*(?:no|number)?\s*[:\-]?\s*(\d{10,15})',
+            r'(?:visa|residence)\s*([0-9\/\-]{10,})'
+        ]
+        for pattern in visa_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                extracted['visa_number'] = {'value': match.group(1), 'confidence': 90.0, 'source': 'CANCEL_OCR'}
+                break
+
+        # 4. Visa Type
+        visa_types = ['employment', 'dependent', 'investor', 'tourist', 'residence', 'partner']
+        for v_type in visa_types:
+            if v_type in text.lower():
+                 extracted['visa_type'] = {'value': v_type.upper(), 'confidence': 85.0, 'source': 'CANCEL_OCR'}
+                 break
+
+        # 5. Sponsor ID / Establishment ID
+        sponsor_id_patterns = [
+            r'sponsor\s*(?:id|number)?\s*[:\-]?\s*(\d{10,15})',
+            r'establishment\s*(?:id|card)?\s*[:\-]?\s*(\d{10,15})'
+        ]
+        for pattern in sponsor_id_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                extracted['sponsor_id'] = {'value': match.group(1), 'confidence': 85.0, 'source': 'CANCEL_OCR'}
+                break
+
+        # 6. Sponsor Name
+        sponsor_name_patterns = [
+            r'sponsor\s*name\s*[:\-]?\s*([A-Z][A-Za-z\s&\.\-]{5,100})',
+            r'sponsor\s*[:\-]?\s*([A-Z][A-Za-z\s&\.\-]{5,100})'
+        ]
+        for pattern in sponsor_name_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                s_name = match.group(1).strip()
+                s_name = re.split(r'\s{2,}|\t|\|', s_name)[0] # Stop at big gaps
+                extracted['sponsor_name'] = {'value': s_name.upper(), 'confidence': 80.0, 'source': 'CANCEL_OCR'}
+                break
+
+        # 7. Cancellation Number
+        cancel_patterns = [
+            r'cancellation\s*(?:no|number|ref|reference)?\s*[:\-]?\s*([A-Z0-9\-\/]+)',
+            r'reference\s*(?:no|number)?\s*[:\-]?\s*([A-Z0-9\-\/]+)',
+            r'transaction\s*(?:no|number)?\s*[:\-]?\s*([A-Z0-9\-\/]+)'
+        ]
+        for pattern in cancel_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                 extracted['cancellation_ref'] = {'value': match.group(1), 'confidence': 85.0, 'source': 'CANCEL_OCR'}
+                 break
+
+        # 8. Nationality
+        nat_match = re.search(r'nationality\s*[:\-]?\s*([A-Za-z\s]+)', text, re.IGNORECASE)
+        if nat_match:
+             extracted['nationality'] = {'value': nat_match.group(1).strip().upper(), 'confidence': 85.0, 'source': 'CANCEL_OCR'}
+        
+        # 9. Profession
+        prof_match = re.search(r'profession\s*[:\-]?\s*([^\n]+)', text, re.IGNORECASE)
+        if prof_match:
+             extracted['profession'] = {'value': prof_match.group(1).split('  ')[0].strip().upper(), 'confidence': 80.0, 'source': 'CANCEL_OCR'}
+
+        return extracted
+
+    def _extract_vat_certificate_proven(self, text: str) -> Dict:
+        """
+        Extract VAT certificate fields - FULLY OPTIMIZED
+        """
+        extracted = {}
+        
+        # Regex patterns provided by user
+        field_patterns = {
+            # Registration Numbers
+            'registration_number': r'(?:registration\s*number|vat\s*number|trn|tax\s*registration)[\s:]*([A-Z0-9\-\/]+)',
+            'certificate_number': r'(?:certificate\s*number|cert\s*no)[\s:]*([A-Z0-9\-\/]+)',
+
+            # Legal Names
+            'legal_name_english': r'(?:legal\s*name|entity\s*name|company\s*name)[\s:]*([A-Za-z0-9\s,&\.-]+)',
+            'legal_name_arabic': r'(?:الاسم\s*القانوني|اسم\s*الكيان|اسم\s*الشركة)[\s:]*([^\n]+)',
+
+            # Address & Contact
+            'registered_address': r'(?:registered\s*address|business\s*address|address)[\s:]*([^\n]+)',
+            'contact_number': r'(?:contact|phone|mobile|tel)[\s:]*([+0-9\-\s\(\)]+)',
+
+            # Important Dates
+            'effective_registration_date': r'(?:effective\s*registration\s*date|effective\s*date)[\s:]*([0-9/\-]+)',
+            'date_of_issue': r'(?:date\s*of\s*issue|issue\s*date|issued\s*on)[\s:]*([0-9/\-]+)',
+
+            # VAT Return Periods
+            'first_vat_return_period': r'(?:first\s*vat\s*return\s*period)[\s:]*([0-9/\-]+\s*(?:to|-|–)\s*[0-9/\-]+)',
+            'vat_return_due_date': r'(?:vat\s*return\s*due\s*date|return\s*due\s*date)[\s:]*([0-9/\-]+)',
+            'tax_period_start_end': r'(?:tax\s*period|period)[\s:]*([0-9/\-]+\s*(?:to|-|–)\s*[0-9/\-]+)',
+        }
+        
+        text_clean = text.replace('\r', '\n')
+        # Use case-insensitive search (re.IGNORECASE)
+        
+        for key, pattern in field_patterns.items():
+            match = re.search(pattern, text_clean, re.MULTILINE | re.IGNORECASE)
+            if match:
+                value = match.group(1).strip()
+                extracted[key] = {
+                    'value': value,
+                    'confidence': 90.0 if len(value) > 2 else 50.0,
+                    'source': 'VAT_OCR'
+                }
+        
+        return extracted
+
+    def _extract_entry_permit_proven(self, text: str) -> Dict:
+        """
+        Extract Entry Permit fields - FULLY OPTIMIZED
+        """
+        extracted = {}
+        
+        # Smart field patterns (UAE, SAUDI, QATAR, BAHRAIN, OMAN SUPPORT)
+        field_patterns = {
+            # --- Core Permit Identifiers ---
+            'permit_number': r'(?:entry\s*permit\s*(?:number|no|#)|permit\s*no)[\s:]*([A-Z0-9\-\/]+)',
+            'visa_number': r'(?:visa\s*(?:number|no|#))[\s:]*([A-Z0-9\-\/]+)',
+            'file_number': r'(?:file\s*number|file\s*no)[\s:]*([A-Z0-9\-\/]+)',
+            'uid_number': r'(?:uid\s*(?:number|no))[\s:]*([0-9]{6,15})',
+            'application_number': r'(?:application\s*(?:number|no|#))[\s:]*([A-Z0-9\-\/]+)',
+            'reference_number': r'(?:reference\s*(?:number|no|#)|ref\s*no)[\s:]*([A-Z0-9\-\/]+)',
+
+            # --- Personal Info ---
+            'full_name': r'(?:full\s*name|applicant\s*name|name)[\s:]*([A-Za-z\u0600-\u06FF\s\.-]+)',
+            'nationality': r'(?:nationality|citizenship)[\s:]*([A-Za-z\u0600-\u06FF\s]+)',
+            'gender': r'(?:gender|sex)[\s:]*([A-Za-z]+)',
+            'date_of_birth': r'(?:date\s*of\s*birth|dob)[\s:]*([0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4})',
+
+            # --- Passport Info ---
+            'passport_number': r'(?:passport\s*(?:number|no|#))[\s:]*([A-Z0-9]{6,15})',
+            'passport_issue_date': r'(?:passport\s*issue\s*date)[\s:]*([0-9\/\-]+)',
+            'passport_expiry_date': r'(?:passport\s*expiry\s*date|passport\s*valid\s*until)[\s:]*([0-9\/\-]+)',
+            'passport_issue_place': r'(?:place\s*of\s*issue)[\s:]*([A-Za-z\u0600-\u06FF\s]+)',
+
+            # --- Permit Details ---
+            'permit_type': r'(?:permit\s*type|visa\s*type)[\s:]*([A-Za-z\s]+)',
+            'permit_category': r'(?:permit\s*category|category)[\s:]*([A-Za-z0-9\s]+)',
+            'entry_type': r'(?:entry\s*type)[\s:]*([A-Za-z\s]+)',
+            'number_of_entries': r'(?:entries\s*allowed)[\s:]*([A-Za-z0-9]+)',
+            'duration': r'(?:duration|validity\s*period)[\s:]*([0-9]+\s*(?:days?|months?|yrs?|years?))',
+
+            # --- Validity Dates ---
+            'issue_date': r'(?:issue\s*date|issued\s*on)[\s:]*([0-9\/\-]+)',
+            'expiry_date': r'(?:expiry\s*date|expires\s*on)[\s:]*([0-9\/\-]+)',
+            'valid_from': r'(?:valid\s*from|entry\s*from)[\s:]*([0-9\/\-]+)',
+            'valid_until': r'(?:valid\s*until|entry\s*until)[\s:]*([0-9\/\-]+)',
+
+            # --- Travel Info ---
+            'port_of_entry': r'(?:port\s*of\s*entry|entry\s*point)[\s:]*([A-Za-z\u0600-\u06FF\s]+)',
+            'purpose_of_visit': r'(?:purpose\s*of\s*visit|purpose)[\s:]*([A-Za-z\u0600-\u06FF\s]+)',
+
+            # --- Sponsor / Employer ---
+            'sponsor_name': r'(?:sponsor\s*name|sponsored\s*by)[\s:]*([A-Za-z\u0600-\u06FF\s\.-]+)',
+            'sponsor_id': r'(?:sponsor\s*(?:id|number|no))[\s:]*([A-Z0-9\-\/]+)',
+            'employer_name': r'(?:employer\s*name|company\s*name)[\s:]*([A-Za-z\u0600-\u06FF\s\.-]+)',
+            'job_title': r'(?:job\s*title|position)[\s:]*([A-Za-z\u0600-\u06FF\s]+)',
+
+            # --- Contact ---
+            'email': r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,})',
+            'phone': r'(?:phone|mobile|contact)[\s:]*([+0-9\-\s\(\)]{6,20})',
+            'address': r'(?:address)[\s:]*([A-Za-z0-9\u0600-\u06FF,\-\s]+)',
+
+            # --- Status ---
+            'status': r'(?:status)[\s:]*([A-Za-z]+)',
+            'approval_status': r'(?:approval\s*status)[\s:]*([A-Za-z\s]+)',
+
+            # --- Issuing Authority ---
+            'issued_by': r'(?:issued\s*by|issuing\s*authority)[\s:]*([A-Za-z\u0600-\u06FF\s]+)',
+            'issuing_office': r'(?:issuing\s*office)[\s:]*([A-Za-z\u0600-\u06FF\s]+)',
+
+            # --- QR / Barcode ---
+            'qr_code': r'(?:qr\s*code)[\s:]*([A-Za-z0-9]+)',
+            'barcode_number': r'(?:barcode|bar\s*code)[\s:]*([A-Za-z0-9]+)',
+        }
+        
+        text_clean = text.replace('\r', '\n')
+        
+        for key, pattern in field_patterns.items():
+            match = re.search(pattern, text_clean, re.MULTILINE | re.IGNORECASE)
+            if match:
+                value = match.group(1).strip()
+                extracted[key] = {
+                    'value': value,
+                    'confidence': 90.0 if len(value) > 2 else 50.0,
+                    'source': 'PERMIT_OCR'
+                }
+        
+        return extracted
+
+    def _extract_company_license_proven(self, text: str) -> Dict:
+        """
+        Extract UAE Company License fields + Tables - FULLY OPTIMIZED
+        """
+        extracted = {}
+        
+        field_patterns = {
+            # ------------------- CORE LICENSE FIELDS -------------------------
+            "license_type": r"(?:license\s*type)\s*[:\-]?\s*([A-Za-z\s]+)",
+            "license_no": r"(?:license\s*no|licence\s*no|license\s*number)\s*[:\-]?\s*([A-Z0-9\-\/]+)",
+            "main_license_no": r"(?:main\s*license\s*no)\s*[:\-]?\s*([A-Z0-9\-\/]+)",
+            "register_no": r"(?:register\s*no)\s*[:\-]?\s*([A-Z0-9\-\/]+)",
+            "dcci_no": r"(?:dcci\s*no)\s*[:\-]?\s*([A-Z0-9\-\/]+)",
+            "duns_no": r"(?:d[\.\-]?\s*&?\s*b|duns|d-u-n-s)\s*[:\-]?\s*([0-9\-]+)",
+
+            # ------------------- COMPANY DETAILS ----------------------------
+            "company_name": r"(?:company\s*name)\s*[:\-]?\s*([A-Za-z0-9\s&\.,\-]+)",
+            "company_name_ar": r"(?:اسم\s*الشركة)\s*[:\-]?\s*([^\n]+)",
+            "business_name": r"(?:business\s*name|trade\s*name)\s*[:\-]?\s*([A-Za-z0-9\s&\.,\-]+)",
+            "legal_type": r"(?:legal\s*type|entity\s*type|legal\s*form)\s*[:\-]?\s*([A-Za-z\s]+)",
+
+            # ------------------- DATES ----------------------------
+            "issue_date": r"(?:issue\s*date)\s*[:\-]?\s*([0-9\/\-]+)",
+            "expiry_date": r"(?:expiry\s*date|expires\s*on)\s*[:\-]?\s*([0-9\/\-]+)",
+
+            # ------------------- ADDRESS ----------------------------
+            "address": r"(?:address)\s*[:\-]?\s*([A-Za-z0-9\s,\-\/]+)",
+            "po_box": r"(?:p\.?\s*o\.?\s*box)\s*[:\-]?\s*([0-9]+)",
+            "phone": r"(?:phone\s*no|contact)\s*[:\-]?\s*([+0-9\s\-\(\)]+)",
+            "fax": r"(?:fax\s*no)\s*[:\-]?\s*([+0-9\s\-\(\)]+)",
+            "mobile": r"(?:mobile\s*no)\s*[:\-]?\s*([+0-9\s\-\(\)]+)",
+            "parcel_id": r"(?:parcel\s*id)\s*[:\-]?\s*([A-Za-z0-9\-\/]+)",
+            "email": r"([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})",
+        }
+        
+        text_clean = text.replace('\r', '\n')
+        
+        for key, pattern in field_patterns.items():
+            match = re.search(pattern, text_clean, re.MULTILINE | re.IGNORECASE)
+            if match:
+                value = match.group(1).strip()
+                extracted[key] = {
+                    'value': value,
+                    'confidence': 90.0 if len(value) > 2 else 50.0,
+                    'source': 'LICENSE_OCR'
+                }
+
+        # ------------------ TABLE EXTRACTION ------------------------
+        members = self._extract_license_members(text_clean)
+        if members:
+            extracted['members_table'] = {'value': json.dumps(members), 'confidence': 90.0, 'source': 'TABLE_OCR'}
+            
+        partners = self._extract_partners(text_clean)
+        if partners:
+            extracted['partners_table'] = {'value': json.dumps(partners), 'confidence': 90.0, 'source': 'TABLE_OCR'}
+            
+        return extracted
+
+    def _extract_license_members(self, text: str):
+        """
+        Extract rows like:
+        No | Name | Nationality | Role | Share
+        """
+        rows = []
+        pattern = r"(\d+)\s+([A-Za-z\u0600-\u06FF\s\.]+)\s+([A-Za-z\u0600-\u06FF]+)\s+([A-Za-z\s]+)\s+([0-9\.%]+)"
+        for m in re.finditer(pattern, text, re.MULTILINE):
+            rows.append({
+                "no": m.group(1),
+                "name": m.group(2).strip(),
+                "nationality": m.group(3),
+                "role": m.group(4),
+                "share": m.group(5)
+            })
+        return rows
+
+    def _extract_partners(self, text: str):
+        """
+        Extract rows like:
+        Name | Nationality | Sr No | Share
+        """
+        rows = []
+        pattern = r"([A-Za-z\u0600-\u06FF\s\.]+)\s+([A-Za-z]+)\s+(\d+)\s+([0-9\.%]+)"
+        for m in re.finditer(pattern, text, re.MULTILINE):
+            rows.append({
+                "name": m.group(1).strip(),
+                "nationality": m.group(2),
+                "sr_no": m.group(3),
+                "share": m.group(4)
+            })
+        return rows
+
     
     def _extract_labor_card_proven(self, text: str) -> Dict:
         """
@@ -869,7 +1223,17 @@ class OCRService:
     
     def _extract_labor_name(self, text: str) -> Optional[str]:
         """Extract multi-line name - handles Arabic labor cards"""
-        blacklist = ['expiry', 'permit', 'profession', 'nationality', 'date', 'work', 'card', 'labor', 'establishment']
+        blacklist = ['expiry', 'permit', 'profession', 'nationality', 'date', 'work', 'card', 'labor', 'establishment', 'ministry', 'emirates', 'united', 'arab', 'government', 'resources']
+        
+        # 1. Try explicit 'Name' label extraction (Highest Priority)
+        # Matches: "Name : CHURCHIL..." or "Name: CHURCHIL..."
+        name_match = re.search(r'Name\s*[:\.]?\s*([A-Za-z\s]+)(?:$|\n)', text, re.IGNORECASE)
+        if name_match:
+            candidate = name_match.group(1).strip()
+            # Verify candidate isn't just a junk string or blacklisted
+            if len(candidate) > 3 and not any(k in candidate.lower() for k in blacklist):
+                return candidate.upper()
+
         name_lines = []
         
         # Find all lines with capitalized words (potential name segments)
@@ -927,6 +1291,34 @@ class OCRService:
     
     def _extract_profession(self, text: str) -> Optional[str]:
         """Extract profession - Arabic + English"""
+        # 1. Try explicit 'Profession' label extraction (Highest Priority)
+        # Matches: "Profession : Engineer" or "Profession: Civil Engineer"
+        prof_match = re.search(r'Profession\s*[:\.]?\s*([^\n]+)', text, re.IGNORECASE)
+        if prof_match:
+            profession = prof_match.group(1).strip()
+            # Remove Arabic characters if mixed (optional, or keep both)
+            # For now, let's keep it but clean up common noise
+            if len(profession) > 2:
+                # If mostly Arabic, try to map it
+                arabic_professions = {
+                    'مدير مشروع': 'Project Manager',
+                    'مهندس مدني': 'Civil Engineer',
+                    'مهندس كهربائي': 'Electrical Engineer',
+                    'مهندس ميكانيكي': 'Mechanical Engineer',
+                    'مهندس': 'Engineer',
+                    'عامل': 'Worker',
+                    'فني': 'Technician',
+                    'سائق': 'Driver',
+                    'مشرف': 'Supervisor',
+                    'محاسب': 'Accountant'
+                }
+                for ar, en in arabic_professions.items():
+                    if ar in profession:
+                        return en
+                
+                # If no map match, just return what we found (likely English or mixed)
+                return profession.split('  ')[0].strip() # Take first part if double spaced
+
         # Arabic profession mapping (most common in GCC labor cards)
         arabic_professions = {
             'مدير مشروع': 'Project Manager',
@@ -1116,7 +1508,7 @@ class OCRService:
 
     
     def process_document(
-        self, file_path: str, document_type: str, temp_dir: str
+        self, file_path: str, document_type: str, temp_dir: str, pre_extracted_text: Optional[str] = None
     ) -> Dict:
         """
         Process a document (PDF or image) and extract all fields
@@ -1129,12 +1521,37 @@ class OCRService:
         """
         result = {
             'text_pages': [],
+            'raw_text': '',  # Combined text from all pages for classification
             'extracted_fields': {},
             'overall_confidence': 0.0,
             'status': 'failed'
         }
         
         try:
+            # OPTIMIZATION: Use pre-extracted text if available (skips OCR)
+            if pre_extracted_text:
+                print(f"⚡ Using pre-extracted text for {document_type} (Skipping OCR)")
+                result['raw_text'] = pre_extracted_text
+                result['text_pages'] = [pre_extracted_text]
+                result['overall_confidence'] = 85.0  # Default confidence when skipped
+                
+                # Extract fields directly
+                fields = self.extract_fields_from_text(pre_extracted_text, document_type)
+                
+                for field_name, field_data in fields.items():
+                    result['extracted_fields'][field_name] = {
+                        'value': field_data['value'],
+                        'confidence': field_data['confidence'],
+                        'page': 1
+                    }
+                
+                if result['extracted_fields']:
+                    result['status'] = 'completed'
+                else:
+                    result['status'] = 'partial'
+                    
+                return result
+
             # Check file extension
             file_ext = os.path.splitext(file_path)[1].lower()
             
@@ -1206,6 +1623,9 @@ class OCRService:
                             'confidence': field_data['confidence'],
                             'page': page_num
                         }
+            
+            # Combine all pages into raw_text for classification
+            result['raw_text'] = '\n'.join(result['text_pages'])
             
             # Calculate overall confidence
             if page_confidences:
